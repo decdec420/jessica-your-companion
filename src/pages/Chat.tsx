@@ -67,7 +67,7 @@ const Chat = () => {
         .eq("conversation_id", convId)
         .order("created_at", { ascending: true });
 
-      if (msgs) setMessages(msgs);
+      if (msgs) setMessages(msgs as Message[]);
     } catch (error: any) {
       toast({
         title: "Error",

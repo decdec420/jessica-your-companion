@@ -23,12 +23,19 @@ const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
         });
         if (error) throw error;
         toast({
           title: "Welcome!",
-          description: "Account created successfully. You can now sign in.",
+          description: "Account created successfully. Signing you in...",
         });
+        // Auto sign in after signup since email confirmation is disabled
+        setTimeout(() => {
+          navigate("/");
+        }, 1000);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
