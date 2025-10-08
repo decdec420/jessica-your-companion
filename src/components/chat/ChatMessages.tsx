@@ -33,7 +33,31 @@ const ChatMessages = ({ messages, loading }: ChatMessagesProps) => {
                 : "bg-card border border-border"
             }`}
           >
-            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+            {/* Check for images in content */}
+            {msg.content.includes("[Generated Image:") ? (
+              <div className="space-y-2">
+                {msg.content.split(/(\[Generated Image: [^\]]+\])/).map((part, idx) => {
+                  const imageMatch = part.match(/\[Generated Image: ([^\]]+)\]/);
+                  if (imageMatch) {
+                    return (
+                      <img
+                        key={idx}
+                        src={imageMatch[1]}
+                        alt="Generated"
+                        className="rounded-lg max-w-full"
+                      />
+                    );
+                  }
+                  return part ? (
+                    <p key={idx} className="text-sm whitespace-pre-wrap">
+                      {part}
+                    </p>
+                  ) : null;
+                })}
+              </div>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+            )}
           </div>
         </div>
       ))}

@@ -6,6 +6,7 @@ import ChatHeader from "@/components/chat/ChatHeader";
 import ChatMessages from "@/components/chat/ChatMessages";
 import ChatInput from "@/components/chat/ChatInput";
 import EmptyState from "@/components/chat/EmptyState";
+import CapabilitiesBar from "@/components/chat/CapabilitiesBar";
 
 type Message = {
   id: string;
@@ -136,6 +137,7 @@ const Chat = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/10 via-secondary/10 to-background">
       <ChatHeader />
+      <CapabilitiesBar />
       {messages.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <EmptyState />
@@ -148,6 +150,7 @@ const Chat = () => {
         loading={loading}
         onInputChange={setInput}
         onSend={sendMessage}
+        onImageUploaded={(url) => setInput((prev) => `${prev}\n[Image: ${url}]`)}
       />
     </div>
   );

@@ -1,15 +1,18 @@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import VoiceInput from "./VoiceInput";
+import ImageUpload from "./ImageUpload";
 
 interface ChatInputProps {
   input: string;
   loading: boolean;
   onInputChange: (value: string) => void;
   onSend: () => void;
+  onImageUploaded?: (url: string) => void;
 }
 
-const ChatInput = ({ input, loading, onInputChange, onSend }: ChatInputProps) => {
+const ChatInput = ({ input, loading, onInputChange, onSend, onImageUploaded }: ChatInputProps) => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -17,9 +20,21 @@ const ChatInput = ({ input, loading, onInputChange, onSend }: ChatInputProps) =>
     }
   };
 
+  const handleVoiceTranscript = (transcript: string) => {
+    onInputChange(transcript);
+  };
+
+  const handleImageUpload = (url: string) => {
+    onImageUploaded?.(url);
+  };
+
   return (
     <div className="bg-card/80 backdrop-blur-sm border-t border-border p-4">
       <div className="max-w-4xl mx-auto flex gap-2">
+        <div className="flex gap-2 shrink-0">
+          <VoiceInput onTranscript={handleVoiceTranscript} disabled={loading} />
+          <ImageUpload onImageUploaded={handleImageUpload} disabled={loading} />
+        </div>
         <Textarea
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
@@ -31,7 +46,7 @@ const ChatInput = ({ input, loading, onInputChange, onSend }: ChatInputProps) =>
         <Button
           onClick={onSend}
           disabled={loading || !input.trim()}
-          className="bg-gradient-to-br from-primary to-secondary hover:opacity-90 transition-opacity h-[60px] px-6"
+          className="bg-gradient-to-br from-primary to-secondary hover:opacity-90 transition-opacity h-[60px] px-6 shrink-0"
         >
           <Send className="w-5 h-5" />
         </Button>

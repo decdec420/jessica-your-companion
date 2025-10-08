@@ -120,6 +120,36 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
               },
               required: ["category", "memory_text", "importance"]
             }
+          },
+          {
+            type: "function",
+            name: "generate_image",
+            description: "Generate an image based on a text description. Use this when the user asks you to create, generate, or visualize an image.",
+            parameters: {
+              type: "object",
+              properties: {
+                prompt: {
+                  type: "string",
+                  description: "Detailed description of the image to generate"
+                }
+              },
+              required: ["prompt"]
+            }
+          },
+          {
+            type: "function",
+            name: "web_search",
+            description: "Search the web for current information. Use this when the user asks about recent events, current facts, or information you don't have.",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The search query"
+                }
+              },
+              required: ["query"]
+            }
           }
         ],
         tool_choice: "auto"
@@ -135,11 +165,13 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
     const aiData = await aiResponse.json();
     console.log("AI Response:", JSON.stringify(aiData, null, 2));
 
-    // Handle tool calls (memory saving)
+    // Handle tool calls
+    const toolResults: string[] = [];
     if (aiData.choices[0].message.tool_calls) {
       for (const toolCall of aiData.choices[0].message.tool_calls) {
+        const args = JSON.parse(toolCall.function.arguments);
+        
         if (toolCall.function.name === "save_memory") {
-          const args = JSON.parse(toolCall.function.arguments);
           await supabase.from("memories").insert({
             user_id: user.id,
             category: args.category,
@@ -147,11 +179,61 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
             importance: args.importance
           });
           console.log("Saved memory:", args);
+        } 
+        else if (toolCall.function.name === "generate_image") {
+          try {
+            const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash-image-preview",
+                messages: [
+                  { role: "user", content: args.prompt }
+                ],
+                modalities: ["image", "text"]
+              }),
+            });
+
+            const imageData = await imageResponse.json();
+            const imageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+            
+            if (imageUrl) {
+              toolResults.push(`[Generated Image: ${imageUrl}]`);
+            }
+          } catch (error) {
+            console.error("Image generation error:", error);
+          }
+        }
+        else if (toolCall.function.name === "web_search") {
+          try {
+            const searchResponse = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(args.query)}`, {
+              headers: {
+                "Accept": "application/json",
+                "X-Subscription-Token": Deno.env.get("BRAVE_API_KEY") || ""
+              }
+            });
+
+            const searchData = await searchResponse.json();
+            const results = searchData.web?.results?.slice(0, 3) || [];
+            const summary = results.map((r: any) => `${r.title}: ${r.description}`).join("\n");
+            
+            toolResults.push(`Search results:\n${summary}`);
+          } catch (error) {
+            console.error("Web search error:", error);
+          }
         }
       }
     }
 
-    const responseText = aiData.choices[0].message.content || "I'm here! What's on your mind?";
+    let responseText = aiData.choices[0].message.content || "I'm here! What's on your mind?";
+    
+    // Append tool results if any
+    if (toolResults.length > 0) {
+      responseText += "\n\n" + toolResults.join("\n\n");
+    }
 
     return new Response(
       JSON.stringify({ response: responseText }),
