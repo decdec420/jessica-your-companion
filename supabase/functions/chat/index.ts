@@ -97,58 +97,64 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
         tools: [
           {
             type: "function",
-            name: "save_memory",
-            description: "Save important information about the user to remember for future conversations. Use this when you learn something significant about them.",
-            parameters: {
-              type: "object",
-              properties: {
-                category: {
-                  type: "string",
-                  enum: ["preferences", "goals", "identity", "challenges", "interests"],
-                  description: "The category of the memory"
+            function: {
+              name: "save_memory",
+              description: "Save important information about the user to remember for future conversations. Use this when you learn something significant about them.",
+              parameters: {
+                type: "object",
+                properties: {
+                  category: {
+                    type: "string",
+                    enum: ["preferences", "goals", "identity", "challenges", "interests"],
+                    description: "The category of the memory"
+                  },
+                  memory_text: {
+                    type: "string",
+                    description: "Clear, concise description of what to remember"
+                  },
+                  importance: {
+                    type: "number",
+                    minimum: 1,
+                    maximum: 10,
+                    description: "How important this memory is (1-10)"
+                  }
                 },
-                memory_text: {
-                  type: "string",
-                  description: "Clear, concise description of what to remember"
-                },
-                importance: {
-                  type: "number",
-                  minimum: 1,
-                  maximum: 10,
-                  description: "How important this memory is (1-10)"
-                }
-              },
-              required: ["category", "memory_text", "importance"]
+                required: ["category", "memory_text", "importance"]
+              }
             }
           },
           {
             type: "function",
-            name: "generate_image",
-            description: "Generate an image based on a text description. Use this when the user asks you to create, generate, or visualize an image.",
-            parameters: {
-              type: "object",
-              properties: {
-                prompt: {
-                  type: "string",
-                  description: "Detailed description of the image to generate"
-                }
-              },
-              required: ["prompt"]
+            function: {
+              name: "generate_image",
+              description: "Generate an image based on a text description. Use this when the user asks you to create, generate, or visualize an image.",
+              parameters: {
+                type: "object",
+                properties: {
+                  prompt: {
+                    type: "string",
+                    description: "Detailed description of the image to generate"
+                  }
+                },
+                required: ["prompt"]
+              }
             }
           },
           {
             type: "function",
-            name: "web_search",
-            description: "Search the web for current information. Use this when the user asks about recent events, current facts, or information you don't have.",
-            parameters: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: "The search query"
-                }
-              },
-              required: ["query"]
+            function: {
+              name: "web_search",
+              description: "Search the web for current information. Use this when the user asks about recent events, current facts, or information you don't have.",
+              parameters: {
+                type: "object",
+                properties: {
+                  query: {
+                    type: "string",
+                    description: "The search query"
+                  }
+                },
+                required: ["query"]
+              }
             }
           }
         ],
