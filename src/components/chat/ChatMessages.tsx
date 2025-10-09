@@ -33,18 +33,18 @@ const ChatMessages = ({ messages, loading }: ChatMessagesProps) => {
                 : "bg-card border border-border"
             }`}
           >
-            {/* Check for images in content */}
-            {msg.content.includes("[Generated Image:") ? (
+            {/* Check for images and attachments */}
+            {msg.content.includes("[Image:") || msg.content.includes("[Generated Image:") ? (
               <div className="space-y-2">
-                {msg.content.split(/(\[Generated Image: [^\]]+\])/).map((part, idx) => {
-                  const imageMatch = part.match(/\[Generated Image: ([^\]]+)\]/);
+                {msg.content.split(/(\[(?:Generated )?Image: [^\]]+\])/).map((part, idx) => {
+                  const imageMatch = part.match(/\[(?:Generated )?Image: ([^\]]+)\]/);
                   if (imageMatch) {
                     return (
                       <img
                         key={idx}
                         src={imageMatch[1]}
-                        alt="Generated"
-                        className="rounded-lg max-w-full"
+                        alt="Attachment"
+                        className="rounded-lg max-w-full shadow-lg hover:scale-105 transition-transform"
                       />
                     );
                   }
@@ -56,7 +56,7 @@ const ChatMessages = ({ messages, loading }: ChatMessagesProps) => {
                 })}
               </div>
             ) : (
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
             )}
           </div>
         </div>

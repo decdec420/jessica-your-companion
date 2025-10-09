@@ -12,14 +12,17 @@ const ChatHeader = () => {
   };
 
   return (
-    <div className="bg-card/80 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between">
+    <div className="bg-card/80 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-          <Sparkles className="w-5 h-5 text-white" />
+        <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center shadow-lg">
+          <span className="text-white font-bold text-xl">J</span>
+          <Sparkles className="absolute -top-1 -right-1 w-4 h-4 text-accent animate-pulse" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold">Jessica</h1>
-          <p className="text-sm text-muted-foreground">Your AI companion</p>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            Jessica
+          </h1>
+          <p className="text-xs text-muted-foreground">Your AI Companion</p>
         </div>
       </div>
       <div className="flex gap-2">
