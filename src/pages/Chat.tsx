@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -24,11 +24,44 @@ const Chat = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    initializeConversation();
+  const sendInitialGreeting = useCallback(async (convId: string) => {
+    try {
+      setLoading(true);
+      
+      // Call edge function with a special greeting request
+      const { data, error } = await supabase.functions.invoke("chat", {
+        body: {
+          message: "__INITIAL_GREETING__",
+          conversationId: convId,
+        },
+      });
+
+      if (error) throw error;
+
+      // Add assistant greeting message
+      const greetingMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: data.response,
+        created_at: new Date().toISOString(),
+      };
+      setMessages([greetingMsg]);
+
+      // Save greeting message
+      await supabase.from("messages").insert({
+        conversation_id: convId,
+        role: "assistant",
+        content: data.response,
+      });
+    } catch (error: any) {
+      console.error("Error sending initial greeting:", error);
+      // Don't show error toast for greeting failures - conversation can still proceed
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const initializeConversation = async () => {
+  const initializeConversation = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -45,6 +78,8 @@ const Chat = () => {
         .limit(1);
 
       let convId: string;
+      let isNewConversation = false;
+      
       if (conversations && conversations.length > 0) {
         convId = conversations[0].id;
       } else {
@@ -54,21 +89,12 @@ const Chat = () => {
           .select()
           .single();
         convId = newConv!.id;
+        isNewConversation = true;
       }
 
       setConversationId(convId);
-      loadMessages(convId);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const loadMessages = async (convId: string) => {
-    try {
+      
+      // Load messages
       const { data: msgs } = await supabase
         .from("messages")
         .select("*")
@@ -76,14 +102,37 @@ const Chat = () => {
         .order("created_at", { ascending: true });
 
       if (msgs) setMessages(msgs as Message[]);
+      
+      // Check if conversation is empty and send greeting
+      if (isNewConversation && (!msgs || msgs.length === 0)) {
+        await sendInitialGreeting(convId);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [navigate, toast, sendInitialGreeting]);
+
+  useEffect(() => {
+    initializeConversation();
+  }, [initializeConversation]);
+
+  const handleSelectConversation = async (id: string) => {
+    setConversationId(id);
+    try {
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", id)
+        .order("created_at", { ascending: true });
+
+      if (msgs) setMessages(msgs as Message[]);
     } catch (error: any) {
       console.error("Error loading messages:", error);
     }
-  };
-
-  const handleSelectConversation = (id: string) => {
-    setConversationId(id);
-    loadMessages(id);
   };
 
   const handleNewConversation = async () => {
@@ -100,6 +149,8 @@ const Chat = () => {
       if (newConv) {
         setConversationId(newConv.id);
         setMessages([]);
+        // Send initial greeting from Jessica
+        await sendInitialGreeting(newConv.id);
       }
     } catch (error: any) {
       toast({

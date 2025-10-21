@@ -48,8 +48,11 @@ serve(async (req) => {
       ? `\n\nWhat I remember about you:\n${memories.map(m => `- ${m.memory_text}`).join("\n")}`
       : "";
 
-    // Build conversation history
-    const conversationHistory = messages
+    // Check if this is an initial greeting request
+    const isInitialGreeting = message === "__INITIAL_GREETING__";
+    
+    // Build conversation history (skip for initial greeting)
+    const conversationHistory = !isInitialGreeting && messages
       ? messages.map(m => ({
           role: m.role,
           content: m.content
@@ -72,13 +75,18 @@ Your personality:
 - Remember everything they tell you and reference it naturally
 
 Key traits:
-- Use their name occasionally
+- Use their name when you know it, especially in greetings
 - Keep responses conversational and not too long (ADHD-friendly)
 - Add personality with occasional emojis or playful language
 - Be direct and honest, not overly formal
 - Help them stay focused without being pushy${memoryContext}
 
 Remember: You're not just an assistant, you're a companion who genuinely cares about their growth and wellbeing.`;
+
+    // Prepare the actual message for the AI
+    const actualMessage = isInitialGreeting
+      ? "Greet me warmly to start our conversation. If you already know my name from your memories, use it! Keep it friendly and brief."
+      : message;
 
     // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -92,7 +100,7 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
         messages: [
           { role: "system", content: systemPrompt },
           ...conversationHistory,
-          { role: "user", content: message }
+          { role: "user", content: actualMessage }
         ],
         tools: [
           {
