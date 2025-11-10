@@ -83,6 +83,8 @@ const Chat = () => {
 
   const handleSelectConversation = (id: string) => {
     setConversationId(id);
+    setMessages([]);
+    setInput("");
     loadMessages(id);
   };
 
@@ -93,13 +95,14 @@ const Chat = () => {
 
       const { data: newConv } = await supabase
         .from("conversations")
-        .insert({ user_id: user.id, title: "New Chat" })
+        .insert({ user_id: user.id, title: "New Chat", last_message_at: new Date().toISOString() })
         .select()
         .single();
 
       if (newConv) {
         setConversationId(newConv.id);
         setMessages([]);
+        setInput("");
       }
     } catch (error: any) {
       toast({

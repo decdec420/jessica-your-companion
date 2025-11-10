@@ -51,6 +51,28 @@ const ConversationSidebar = ({
     }
   };
 
+  // Realtime subscription to keep conversations updated
+  useEffect(() => {
+    const channel = supabase
+      .channel("conversations_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "conversations",
+        },
+        () => {
+          loadConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const deleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {

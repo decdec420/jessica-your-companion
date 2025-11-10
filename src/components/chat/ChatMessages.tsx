@@ -17,7 +17,7 @@ const ChatMessages = ({ messages, loading }: ChatMessagesProps) => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -27,7 +27,7 @@ const ChatMessages = ({ messages, loading }: ChatMessagesProps) => {
           className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
         >
           <div
-            className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+            className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-md transition-all hover:shadow-lg ${
               msg.role === "user"
                 ? "bg-gradient-to-br from-primary to-secondary text-white"
                 : "bg-card border border-border"
@@ -63,11 +63,14 @@ const ChatMessages = ({ messages, loading }: ChatMessagesProps) => {
       ))}
       {loading && (
         <div className="flex justify-start">
-          <div className="bg-card border border-border rounded-2xl px-4 py-3">
-            <div className="flex gap-1">
-              <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" />
-              <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:0.2s]" />
-              <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:0.4s]" />
+          <div className="bg-card border border-border rounded-2xl px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 rounded-full bg-primary animate-bounce" />
+                <div className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
+                <div className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
+              </div>
+              <span className="text-xs text-muted-foreground animate-pulse">Jessica is thinking...</span>
             </div>
           </div>
         </div>

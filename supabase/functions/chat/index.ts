@@ -127,7 +127,7 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
                 properties: {
                   category: {
                     type: "string",
-                    enum: ["preferences", "goals", "identity", "challenges", "interests"],
+                    enum: ["preferences", "goals", "identity", "challenges", "interests", "emotional_state", "achievements"],
                     description: "The category of the memory"
                   },
                   memory_text: {
@@ -142,6 +142,23 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
                   }
                 },
                 required: ["category", "memory_text", "importance"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "update_conversation_title",
+              description: "Update the conversation title to reflect what we're discussing. Use this after a few messages when the topic becomes clear.",
+              parameters: {
+                type: "object",
+                properties: {
+                  title: {
+                    type: "string",
+                    description: "Short, descriptive title for the conversation (max 50 chars)"
+                  }
+                },
+                required: ["title"]
               }
             }
           },
@@ -200,14 +217,43 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
         const args = JSON.parse(toolCall.function.arguments);
         
         if (toolCall.function.name === "save_memory") {
-          await supabase.from("memories").insert({
-            user_id: user.id,
-            category: args.category,
-            memory_text: args.memory_text,
-            importance: args.importance
-          });
-          console.log("Saved memory:", args);
-        } 
+          // Check if similar memory exists and update instead of duplicate
+          const { data: existingMemories } = await supabase
+            .from("memories")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("category", args.category)
+            .ilike("memory_text", `%${args.memory_text.substring(0, 20)}%`);
+
+          if (existingMemories && existingMemories.length > 0) {
+            // Update existing memory
+            await supabase
+              .from("memories")
+              .update({
+                memory_text: args.memory_text,
+                importance: args.importance,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", existingMemories[0].id);
+            console.log("Updated memory:", args);
+          } else {
+            // Create new memory
+            await supabase.from("memories").insert({
+              user_id: user.id,
+              category: args.category,
+              memory_text: args.memory_text,
+              importance: args.importance
+            });
+            console.log("Saved memory:", args);
+          }
+        }
+        else if (toolCall.function.name === "update_conversation_title") {
+          await supabase
+            .from("conversations")
+            .update({ title: args.title })
+            .eq("id", conversationId);
+          console.log("Updated conversation title:", args.title);
+        }
         else if (toolCall.function.name === "generate_image") {
           try {
             const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
