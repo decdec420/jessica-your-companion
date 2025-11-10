@@ -11,6 +11,7 @@ interface Conversation {
   title: string;
   created_at: string;
   updated_at: string;
+  last_message_at: string;
 }
 
 interface ConversationSidebarProps {
@@ -41,7 +42,7 @@ const ConversationSidebar = ({
         .from("conversations")
         .select("*")
         .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
+        .order("last_message_at", { ascending: false });
 
       if (error) throw error;
       setConversations(data || []);
@@ -133,7 +134,7 @@ const ConversationSidebar = ({
                         </h3>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(conv.updated_at), {
+                        {formatDistanceToNow(new Date(conv.last_message_at || conv.updated_at), {
                           addSuffix: true,
                         })}
                       </p>

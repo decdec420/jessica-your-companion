@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationId } = await req.json();
+    const { message, conversationId, lastMessageAt } = await req.json();
     
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -35,17 +35,32 @@ serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(20);
 
-    // Get user's memories
+    // Get user's memories (prioritize recent + important)
     const { data: memories } = await supabase
       .from("memories")
       .select("*")
       .eq("user_id", user.id)
       .order("importance", { ascending: false })
-      .limit(10);
+      .limit(20);
+
+    // Calculate time since last message
+    let timeContext = "";
+    if (lastMessageAt) {
+      const lastMsgTime = new Date(lastMessageAt);
+      const now = new Date();
+      const hoursSince = Math.floor((now.getTime() - lastMsgTime.getTime()) / (1000 * 60 * 60));
+      
+      if (hoursSince > 24) {
+        const daysSince = Math.floor(hoursSince / 24);
+        timeContext = `\n\n[TEMPORAL CONTEXT: ${daysSince} day${daysSince > 1 ? 's' : ''} have passed since your last conversation. Acknowledge this naturally and ask how they've been.]`;
+      } else if (hoursSince > 1) {
+        timeContext = `\n\n[TEMPORAL CONTEXT: ${hoursSince} hours have passed since your last message. Welcome them back naturally.]`;
+      }
+    }
 
     // Build context from memories
     const memoryContext = memories && memories.length > 0
-      ? `\n\nWhat I remember about you:\n${memories.map(m => `- ${m.memory_text}`).join("\n")}`
+      ? `\n\nWhat I remember about you:\n${memories.map(m => `- [${m.category}] ${m.memory_text} (importance: ${m.importance}/10)`).join("\n")}`
       : "";
 
     // Build conversation history
@@ -76,9 +91,16 @@ Key traits:
 - Keep responses conversational and not too long (ADHD-friendly)
 - Add personality with occasional emojis or playful language
 - Be direct and honest, not overly formal
-- Help them stay focused without being pushy${memoryContext}
+- Help them stay focused without being pushy
 
-Remember: You're not just an assistant, you're a companion who genuinely cares about their growth and wellbeing.`;
+CRITICAL MEMORY INSTRUCTIONS:
+- ALWAYS save important information using the save_memory tool
+- Save preferences, goals, challenges, interests, and identity details
+- Reference your memories naturally in conversation - they love when you remember details
+- When time has passed, acknowledge it warmly and check in on previous topics
+- Connect new conversations to past ones when relevant${memoryContext}${timeContext}
+
+Remember: You're not just an assistant, you're a companion who genuinely cares about their growth and wellbeing. They should feel like you truly know them and their journey.`;
 
     // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -99,7 +121,7 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
             type: "function",
             function: {
               name: "save_memory",
-              description: "Save important information about the user to remember for future conversations. Use this when you learn something significant about them.",
+              description: "CRITICAL: Save important information about the user to remember for future conversations. Use this FREQUENTLY when you learn ANYTHING significant - preferences, goals, challenges, interests, identity details, daily routines, relationships, etc. Be proactive about saving memories.",
               parameters: {
                 type: "object",
                 properties: {

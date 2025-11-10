@@ -41,7 +41,7 @@ const Chat = () => {
         .from("conversations")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
+        .order("last_message_at", { ascending: false })
         .limit(1);
 
       let convId: string;
@@ -118,6 +118,13 @@ const Chat = () => {
     setLoading(true);
 
     try {
+      // Get conversation to find last message time
+      const { data: conversation } = await supabase
+        .from("conversations")
+        .select("last_message_at")
+        .eq("id", conversationId)
+        .single();
+
       // Add user message to UI
       const userMsg: Message = {
         id: crypto.randomUUID(),
@@ -134,11 +141,12 @@ const Chat = () => {
         content: userMessage,
       });
 
-      // Call edge function
+      // Call edge function with temporal context
       const { data, error } = await supabase.functions.invoke("chat", {
         body: {
           message: userMessage,
           conversationId,
+          lastMessageAt: conversation?.last_message_at,
         },
       });
 
