@@ -106,6 +106,75 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          completed_at: string | null
+          confidence_score: number | null
+          conversation_id: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          parent_task_id: string | null
+          priority: number | null
+          project_context: string | null
+          source_memory_id: string | null
+          status: string
+          task_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          confidence_score?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          parent_task_id?: string | null
+          priority?: number | null
+          project_context?: string | null
+          source_memory_id?: string | null
+          status?: string
+          task_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          confidence_score?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          parent_task_id?: string | null
+          priority?: number | null
+          project_context?: string | null
+          source_memory_id?: string | null
+          status?: string
+          task_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
 import Memories from "./pages/Memories";
+import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Memories />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <Tasks />
               </ProtectedRoute>
             }
           />

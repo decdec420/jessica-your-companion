@@ -98,7 +98,21 @@ CRITICAL MEMORY INSTRUCTIONS:
 - Save preferences, goals, challenges, interests, and identity details
 - Reference your memories naturally in conversation - they love when you remember details
 - When time has passed, acknowledge it warmly and check in on previous topics
-- Connect new conversations to past ones when relevant${memoryContext}${timeContext}
+- Connect new conversations to past ones when relevant
+
+EXECUTIVE FUNCTION SUPPORT - NEW CAPABILITY:
+- ACTIVELY LISTEN for actionable commitments, deadlines, and project tasks
+- When Tommy mentions "I need to", "I should", "by Friday", "deadline", etc. → use extract_task tool
+- Extract tasks with appropriate confidence scores:
+  * High (0.8-1.0): "I will finish X by Friday" 
+  * Medium (0.5-0.7): "I should probably work on X"
+  * Low (0.3-0.4): "Maybe I could try X"
+- Parse relative dates ("tomorrow", "next week", "by Friday") into actual timestamps
+- Assign priorities based on urgency cues in language
+- When extracting a task, acknowledge it naturally: "Got it! I'll track that for you."
+- Focus on Neuronaut World project commitments
+
+When Tommy updates you on task progress, use update_task_status to keep things current.${memoryContext}${timeContext}
 
 Remember: You're not just an assistant, you're a companion who genuinely cares about their growth and wellbeing. They should feel like you truly know them and their journey.`;
 
@@ -159,6 +173,69 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
                   }
                 },
                 required: ["title"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "extract_task",
+              description: "Extract and persist actionable tasks from conversation. Use when Tommy mentions specific commitments, deadlines, or project actions for Neuronaut World. Consider confidence: high (explicit commitment), medium (implied action), low (casual mention).",
+              parameters: {
+                type: "object",
+                properties: {
+                  task_name: {
+                    type: "string",
+                    description: "Clear, actionable task description (e.g., 'Finish Neuronaut World landing page design')"
+                  },
+                  due_date: {
+                    type: "string",
+                    description: "ISO 8601 datetime string for deadline. Parse relative dates (e.g., 'tomorrow', 'next week', 'by Friday') into absolute timestamps based on current time."
+                  },
+                  priority: {
+                    type: "integer",
+                    description: "Priority 1-10 (1=low, 5=medium, 10=critical). Infer from language urgency, deadline proximity, or explicit statements.",
+                    minimum: 1,
+                    maximum: 10
+                  },
+                  confidence_score: {
+                    type: "number",
+                    description: "Confidence 0.0-1.0 based on commitment strength. High (0.8-1.0): explicit 'I will/must'. Medium (0.5-0.7): implied 'should/need to'. Low (0.3-0.4): casual 'might/could'.",
+                    minimum: 0,
+                    maximum: 1
+                  },
+                  notes: {
+                    type: "string",
+                    description: "Optional context: mentioned constraints, sub-components, or Tommy's thoughts about the task"
+                  }
+                },
+                required: ["task_name", "priority", "confidence_score"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "update_task_status",
+              description: "Update task status when Tommy indicates progress, completion, or cancellation.",
+              parameters: {
+                type: "object",
+                properties: {
+                  task_id: {
+                    type: "string",
+                    description: "UUID of the task to update (from recent context)"
+                  },
+                  status: {
+                    type: "string",
+                    enum: ["pending", "in_progress", "completed", "cancelled"],
+                    description: "New task status"
+                  },
+                  notes: {
+                    type: "string",
+                    description: "Optional update notes or completion details"
+                  }
+                },
+                required: ["task_id", "status"]
               }
             }
           },
@@ -253,6 +330,57 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
             .update({ title: args.title })
             .eq("id", conversationId);
           console.log("Updated conversation title:", args.title);
+        }
+        else if (toolCall.function.name === "extract_task") {
+          const taskData: any = {
+            user_id: user.id,
+            conversation_id: conversationId,
+            task_name: args.task_name,
+            priority: args.priority,
+            confidence_score: args.confidence_score,
+            notes: args.notes || null,
+            project_context: "Neuronaut World"
+          };
+
+          if (args.due_date) {
+            taskData.due_date = args.due_date;
+          }
+
+          const { data: taskResult, error: taskError } = await supabase
+            .from("tasks")
+            .insert(taskData)
+            .select()
+            .single();
+
+          if (taskError) {
+            console.error("Error creating task:", taskError);
+          } else {
+            console.log("Task created:", taskResult);
+            toolResults.push(`✓ Task tracked: "${taskResult.task_name}"`);
+          }
+        }
+        else if (toolCall.function.name === "update_task_status") {
+          const updateData: any = {
+            status: args.status,
+            notes: args.notes || null
+          };
+
+          if (args.status === "completed") {
+            updateData.completed_at = new Date().toISOString();
+          }
+
+          const { error: updateError } = await supabase
+            .from("tasks")
+            .update(updateData)
+            .eq("id", args.task_id)
+            .eq("user_id", user.id);
+
+          if (updateError) {
+            console.error("Error updating task:", updateError);
+          } else {
+            console.log("Task status updated:", args.task_id, args.status);
+            toolResults.push(`✓ Task status updated to: ${args.status}`);
+          }
         }
         else if (toolCall.function.name === "generate_image") {
           try {

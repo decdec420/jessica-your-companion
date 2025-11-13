@@ -1,4 +1,4 @@
-import { Sparkles, LogOut, Brain } from "lucide-react";
+import { Sparkles, LogOut, Brain, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,14 @@ const ChatHeader = () => {
         </div>
       </div>
       <div className="flex gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/tasks")}
+          className="hover:bg-primary/10"
+        >
+          <ListTodo className="w-5 h-5" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
