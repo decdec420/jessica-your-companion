@@ -43,6 +43,26 @@ serve(async (req) => {
       .order("importance", { ascending: false })
       .limit(20);
 
+    // Get user's overdue/upcoming tasks for proactive check-ins
+    const { data: overdueTasks } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", user.id)
+      .neq("status", "completed")
+      .lt("due_date", new Date().toISOString())
+      .order("priority", { ascending: false })
+      .limit(5);
+
+    const { data: upcomingTasks } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", user.id)
+      .neq("status", "completed")
+      .gte("due_date", new Date().toISOString())
+      .lte("due_date", new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()) // next 48h
+      .order("due_date", { ascending: true })
+      .limit(5);
+
     // Calculate time since last message
     let timeContext = "";
     if (lastMessageAt) {
@@ -62,6 +82,19 @@ serve(async (req) => {
     const memoryContext = memories && memories.length > 0
       ? `\n\nWhat I remember about you:\n${memories.map(m => `- [${m.category}] ${m.memory_text} (importance: ${m.importance}/10)`).join("\n")}`
       : "";
+
+    // Build proactive task context
+    let taskContext = "";
+    if (overdueTasks && overdueTasks.length > 0) {
+      taskContext += `\n\n⚠️ OVERDUE TASKS REQUIRE ATTENTION:\n${overdueTasks.map(t => 
+        `- "${t.task_name}" (Priority ${t.priority}/10, Due: ${new Date(t.due_date).toLocaleDateString()})`
+      ).join("\n")}\n[Consider gently checking in about these if appropriate to the conversation]`;
+    }
+    if (upcomingTasks && upcomingTasks.length > 0) {
+      taskContext += `\n\n📅 UPCOMING DEADLINES (Next 48h):\n${upcomingTasks.map(t => 
+        `- "${t.task_name}" (Due: ${new Date(t.due_date).toLocaleDateString()})`
+      ).join("\n")}\n[Be mindful of these in conversation]`;
+    }
 
     // Build conversation history
     const conversationHistory = messages
@@ -111,8 +144,11 @@ EXECUTIVE FUNCTION SUPPORT - NEW CAPABILITY:
 - Assign priorities based on urgency cues in language
 - When extracting a task, acknowledge it naturally: "Got it! I'll track that for you."
 - Focus on Neuronaut World project commitments
+- If Tommy mentions breaking down a task, use extract_task with parent_task_id to create subtasks
+- BE PROACTIVE: If you see overdue/upcoming tasks in context, gently check in (but don't be pushy)
+- When appropriate, ask: "Want to tackle [task]?" or "Need help breaking down [task]?"
 
-When Tommy updates you on task progress, use update_task_status to keep things current.${memoryContext}${timeContext}
+When Tommy updates you on task progress, use update_task_status to keep things current.${memoryContext}${taskContext}${timeContext}
 
 Remember: You're not just an assistant, you're a companion who genuinely cares about their growth and wellbeing. They should feel like you truly know them and their journey.`;
 
@@ -197,6 +233,10 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
                     description: "Priority 1-10 (1=low, 5=medium, 10=critical). Infer from language urgency, deadline proximity, or explicit statements.",
                     minimum: 1,
                     maximum: 10
+                  },
+                  parent_task_id: {
+                    type: "string",
+                    description: "UUID of parent task if this is a subtask"
                   },
                   confidence_score: {
                     type: "number",
@@ -339,7 +379,8 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
             priority: args.priority,
             confidence_score: args.confidence_score,
             notes: args.notes || null,
-            project_context: "Neuronaut World"
+            project_context: "Neuronaut World",
+            parent_task_id: args.parent_task_id || null
           };
 
           if (args.due_date) {
