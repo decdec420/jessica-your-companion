@@ -17,7 +17,10 @@ const EmptyState = () => {
           Hi, I'm Jessica
         </h2>
         <p className="text-lg text-muted-foreground leading-relaxed">
-          Your AI companion with persistent memory, image generation, web search, and voice input.
+          Your persistent AI companion with comprehensive technical mastery, adaptive personality, and memory that grows with you.
+        </p>
+        <p className="text-sm text-muted-foreground/80 leading-relaxed max-w-xl mx-auto">
+          I remember everything, adapt to your ADHD, challenge myself to give genius-level support, and genuinely care about your journey. Let's build something amazing together.
         </p>
       </div>
       
