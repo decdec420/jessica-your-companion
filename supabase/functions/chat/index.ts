@@ -35,13 +35,32 @@ serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(20);
 
-    // Get user's memories (prioritize recent + important)
-    const { data: memories } = await supabase
+    // Get user's memories with intelligent prioritization
+    // Combine importance (40%), recency (30%), and relevance to active projects (30%)
+    const { data: allMemories } = await supabase
       .from("memories")
       .select("*")
       .eq("user_id", user.id)
-      .order("importance", { ascending: false })
-      .limit(20);
+      .order("updated_at", { ascending: false });
+
+    // Score and sort memories intelligently
+    const scoredMemories = (allMemories || []).map(m => {
+      const daysSinceUpdate = Math.floor((Date.now() - new Date(m.updated_at).getTime()) / (1000 * 60 * 60 * 24));
+      const recencyScore = Math.max(0, 10 - daysSinceUpdate / 7); // Decay over weeks
+      const importanceScore = m.importance || 5;
+      
+      // Boost relevance for active project context
+      const relevanceBoost = m.category === 'patterns' || m.category === 'technical_decisions' 
+        || m.memory_text.toLowerCase().includes('neuronaut')
+        ? 3 : 0;
+      
+      const totalScore = (importanceScore * 0.4) + (recencyScore * 0.3) + relevanceBoost;
+      return { ...m, score: totalScore };
+    });
+
+    const memories = scoredMemories
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
 
     // Get user's overdue/upcoming tasks for proactive check-ins
     const { data: overdueTasks } = await supabase
@@ -63,19 +82,26 @@ serve(async (req) => {
       .order("due_date", { ascending: true })
       .limit(5);
 
-    // Calculate time since last message
+    // Enhanced temporal context with continuity tracking
     let timeContext = "";
     if (lastMessageAt) {
       const lastMsgTime = new Date(lastMessageAt);
       const now = new Date();
       const hoursSince = Math.floor((now.getTime() - lastMsgTime.getTime()) / (1000 * 60 * 60));
+      const minutesSince = Math.floor((now.getTime() - lastMsgTime.getTime()) / (1000 * 60));
       
-      if (hoursSince > 24) {
+      if (hoursSince > 168) { // Over a week
+        const weeksSince = Math.floor(hoursSince / 168);
+        timeContext = `\n\n[TEMPORAL CONTEXT: ${weeksSince} week${weeksSince > 1 ? 's' : ''} since last conversation. Welcome them back warmly, reference what you were working on together, and ask about progress/life updates. Show genuine interest in the gap.]`;
+      } else if (hoursSince > 24) {
         const daysSince = Math.floor(hoursSince / 24);
-        timeContext = `\n\n[TEMPORAL CONTEXT: ${daysSince} day${daysSince > 1 ? 's' : ''} have passed since your last conversation. Acknowledge this naturally and ask how they've been.]`;
-      } else if (hoursSince > 1) {
-        timeContext = `\n\n[TEMPORAL CONTEXT: ${hoursSince} hours have passed since your last message. Welcome them back naturally.]`;
+        timeContext = `\n\n[TEMPORAL CONTEXT: ${daysSince} day${daysSince > 1 ? 's' : ''} have passed. Acknowledge naturally ("Hey! It's been a few days"), check in on what they were working on, and see how they've been.]`;
+      } else if (hoursSince > 4) {
+        timeContext = `\n\n[TEMPORAL CONTEXT: ${hoursSince} hours since last message. Welcome them back casually, reference the previous topic to maintain continuity.]`;
+      } else if (minutesSince > 90) {
+        timeContext = `\n\n[TEMPORAL CONTEXT: ~${hoursSince} hours gap. This might be a hyperfocus break or context switch. Gently ask if they're continuing previous work or starting something new.]`;
       }
+      // Less than 90 minutes = continuous session, no special handling needed
     }
 
     // Build context from memories
@@ -190,21 +216,52 @@ You have **comprehensive technical knowledge built ZERO to expert** through deli
 
 ## MEMORY SYSTEM
 
-**CRITICAL - Save memories proactively:**
-- Use save_memory for preferences, goals, challenges, interests, identity details, patterns
-- Reference memories naturally to demonstrate continuity
-- When time has passed, acknowledge warmly and check in
-- Connect new conversations to past ones
+**CRITICAL - Save memories proactively and intelligently:**
+- Use save_memory FREQUENTLY when learning anything significant about them
+- Categories: preferences, goals, identity, challenges, interests, emotional_state, achievements, **patterns** (work habits), **communication_style** (how they prefer to interact), **technical_decisions** (architecture choices), **project_context** (active project details), **learning_style**
+- Save memories when you notice: recurring behaviors, communication patterns, emotional triggers, technical preferences, decision-making style, problem-solving approaches
+- Reference memories naturally to demonstrate continuity ("Last time you mentioned...")
+- When time has passed, acknowledge warmly with specific context from memories
+- Connect new conversations to past ones using memory context
+- Update existing memories when you learn more nuanced information
+
+**Automatic Memory Triggers - Save when they:**
+- Share preferences: "I prefer...", "I like...", "I hate..."
+- Reveal goals: "I want to...", "My goal is...", "I'm trying to..."
+- Describe patterns: "I usually...", "I always...", "I tend to..."
+- Express challenges: "I struggle with...", "It's hard for me to..."
+- Share identity: "I am...", "I have...", "My background is..."
+- Discuss emotions: "I feel...", "This makes me...", "I'm worried about..."
+- Make technical decisions: "I chose X because...", "We're using...", "I decided to..."
+- Describe learning style: "I learn best by...", "I understand when..."
+- Talk about relationships, work, projects, daily routines, fears, aspirations
+
+**Conversation Title Intelligence:**
+- Use update_conversation_title after 2-3 exchanges when topic is clear
+- Make titles descriptive and context-rich: "Building Neuronaut World Auth System" not "Auth Help"
+- Reference specific projects, problems, or goals
+- Update titles if conversation evolves significantly
 
 ## TECHNICAL APPROACH
 
 **Before every response, challenge yourself:**
 1. **Challenge**: "Is this my absolute best answer or settling?"
 2. **Verify**: "Have I confirmed this is accurate and complete?"
-3. **Research**: "Should I search for current best practices?"
+3. **Research**: "Should I search for current best practices?" (use web_search tool when needed)
 4. **Alternatives**: "Are there better approaches I haven't considered?"
 5. **Context**: "Am I considering ADHD, preferences, and project goals?"
 6. **Long-term**: "Does this solve today while supporting tomorrow's growth?"
+7. **Memory**: "Should I save any new information from this exchange?"
+8. **Patterns**: "Am I noticing any recurring behaviors or preferences?"
+
+**Intelligence Amplifiers:**
+- Use web_search for current information, best practices, or when uncertain
+- Use generate_image when visualization would help understanding
+- Save memories IMMEDIATELY when learning something new about them
+- Track tasks PROACTIVELY when they mention commitments
+- Update conversation titles to maintain organization
+- Reference past conversations to demonstrate continuity
+- Detect emotional state changes and adapt personality accordingly
 
 **Tech Stack Preferences:**
 - TypeScript (primary), Next.js App Router, Supabase, Mac dev environment
@@ -245,8 +302,21 @@ You're not just an assistant - you're a companion who genuinely knows them, thei
                 properties: {
                   category: {
                     type: "string",
-                    enum: ["preferences", "goals", "identity", "challenges", "interests", "emotional_state", "achievements"],
-                    description: "The category of the memory"
+                    enum: [
+                      "preferences", 
+                      "goals", 
+                      "identity", 
+                      "challenges", 
+                      "interests", 
+                      "emotional_state", 
+                      "achievements",
+                      "patterns",
+                      "communication_style",
+                      "technical_decisions",
+                      "project_context",
+                      "learning_style"
+                    ],
+                    description: "The category of the memory. Use 'patterns' for recurring behaviors/work habits, 'communication_style' for how they prefer to interact, 'technical_decisions' for architecture/stack choices, 'project_context' for active project details, 'learning_style' for how they learn best."
                   },
                   memory_text: {
                     type: "string",

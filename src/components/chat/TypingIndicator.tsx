@@ -6,15 +6,34 @@ interface TypingIndicatorProps {
 
 const TypingIndicator = ({ show }: TypingIndicatorProps) => {
   const [dots, setDots] = useState(".");
+  const [message, setMessage] = useState("Jessica is thinking");
 
   useEffect(() => {
     if (!show) return;
 
-    const interval = setInterval(() => {
+    // Cycle through adaptive messages
+    const messages = [
+      "Jessica is thinking",
+      "Jessica is analyzing", 
+      "Jessica is considering approaches",
+      "Jessica is researching",
+      "Jessica is crafting a response"
+    ];
+    
+    let messageIndex = 0;
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % messages.length;
+      setMessage(messages[messageIndex]);
+    }, 2000);
+
+    const dotsInterval = setInterval(() => {
       setDots((prev) => (prev.length >= 3 ? "." : prev + "."));
     }, 500);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(messageInterval);
+      clearInterval(dotsInterval);
+    };
   }, [show]);
 
   if (!show) return null;
@@ -26,7 +45,7 @@ const TypingIndicator = ({ show }: TypingIndicatorProps) => {
         <div className="w-2 h-2 rounded-full bg-primary animate-pulse [animation-delay:0.2s]" />
         <div className="w-2 h-2 rounded-full bg-primary animate-pulse [animation-delay:0.4s]" />
       </div>
-      <span className="animate-pulse">Jessica is typing{dots}</span>
+      <span className="animate-pulse">{message}{dots}</span>
     </div>
   );
 };

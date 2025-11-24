@@ -2,10 +2,10 @@ import { Brain, Image, Search, MessageSquare } from "lucide-react";
 
 const CapabilitiesBar = () => {
   const capabilities = [
-    { icon: Brain, label: "Memory System", description: "Learns from every conversation" },
-    { icon: Image, label: "Image Generation", description: "Create stunning visuals" },
-    { icon: Search, label: "Web Search", description: "Access real-time data" },
-    { icon: MessageSquare, label: "Voice Input", description: "Speak naturally" },
+    { icon: Brain, label: "Adaptive Intelligence", description: "Learns you, adapts to ADHD, remembers everything" },
+    { icon: MessageSquare, label: "Personality Range", description: "Supportive, spicy, playful - reads the room" },
+    { icon: Image, label: "Image Generation", description: "Create stunning visuals on demand" },
+    { icon: Search, label: "Web Research", description: "Real-time knowledge + deep search" },
   ];
 
   return (
