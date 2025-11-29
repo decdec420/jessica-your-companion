@@ -6,8 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Auth from "./pages/Auth";
-import Chat from "./pages/Chat";
-import Memories from "./pages/Memories";
+import MainLayout from "./components/layout/MainLayout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,15 +51,7 @@ const App = () => (
             path="/"
             element={
               <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/memories"
-            element={
-              <ProtectedRoute>
-                <Memories />
+                <MainLayout />
               </ProtectedRoute>
             }
           />

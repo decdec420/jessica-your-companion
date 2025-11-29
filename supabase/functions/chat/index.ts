@@ -195,6 +195,142 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
                 required: ["query"]
               }
             }
+          },
+          // NEW ENHANCED TOOLS
+          {
+            type: "function",
+            function: {
+              name: "break_down_task",
+              description: "Break down a large or overwhelming task into smaller, manageable steps. Use this when the user mentions feeling overwhelmed or when they describe a complex task.",
+              parameters: {
+                type: "object",
+                properties: {
+                  original_task: {
+                    type: "string",
+                    description: "The original task or goal described by the user"
+                  },
+                  context: {
+                    type: "string",
+                    description: "Additional context about the user's situation, timeline, or constraints"
+                  },
+                  difficulty_preference: {
+                    type: "string",
+                    enum: ["easy_first", "mixed", "hardest_first"],
+                    description: "How to order the subtasks based on difficulty"
+                  }
+                },
+                required: ["original_task"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "suggest_focus_session",
+              description: "Suggest a focused work session with time estimates. Use this when the user wants to work on something but seems unsure about time management.",
+              parameters: {
+                type: "object",
+                properties: {
+                  task_name: {
+                    type: "string",
+                    description: "Name of the task or project to focus on"
+                  },
+                  estimated_duration: {
+                    type: "number",
+                    description: "Suggested duration in minutes (15-120)"
+                  },
+                  break_reminders: {
+                    type: "boolean",
+                    description: "Whether to suggest break reminders during the session"
+                  },
+                  difficulty_level: {
+                    type: "string",
+                    enum: ["low", "medium", "high"],
+                    description: "Estimated mental energy required"
+                  }
+                },
+                required: ["task_name", "estimated_duration"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "create_neuronaut_insight",
+              description: "Generate insights or suggestions specifically related to the Neuronaut World project. Use this when the user mentions their community, platform, or neurodivergent-focused work.",
+              parameters: {
+                type: "object",
+                properties: {
+                  insight_type: {
+                    type: "string",
+                    enum: ["community_engagement", "content_strategy", "technical_feature", "accessibility", "marketing"],
+                    description: "Type of insight to generate"
+                  },
+                  current_context: {
+                    type: "string",
+                    description: "Current situation or challenge they're facing"
+                  },
+                  target_audience: {
+                    type: "string",
+                    description: "Primary audience (ADHD, autism, general neurodivergent, etc.)"
+                  }
+                },
+                required: ["insight_type", "current_context"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "emotional_check_in",
+              description: "Perform a gentle emotional check-in and provide appropriate support. Use this when you detect signs of overwhelm, frustration, or when the user seems to need emotional support.",
+              parameters: {
+                type: "object",
+                properties: {
+                  detected_emotion: {
+                    type: "string",
+                    enum: ["overwhelmed", "frustrated", "excited", "anxious", "focused", "scattered"],
+                    description: "Emotion you've detected in their message"
+                  },
+                  support_type: {
+                    type: "string",
+                    enum: ["validation", "break_suggestion", "reframe", "celebration", "grounding"],
+                    description: "Type of support to offer"
+                  },
+                  context: {
+                    type: "string",
+                    description: "Context about what they're dealing with"
+                  }
+                },
+                required: ["detected_emotion", "support_type"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "suggest_external_integration",
+              description: "Suggest connecting with external tools or platforms that could help with their workflow. Use this when appropriate integrations could enhance their productivity.",
+              parameters: {
+                type: "object",
+                properties: {
+                  tool_type: {
+                    type: "string",
+                    enum: ["task_management", "calendar", "note_taking", "time_tracking", "collaboration"],
+                    description: "Type of tool to suggest"
+                  },
+                  specific_need: {
+                    type: "string",
+                    description: "Specific need or problem this integration would solve"
+                  },
+                  suggested_action: {
+                    type: "string",
+                    description: "Specific action they could take (e.g., 'add this to your Trello board')"
+                  }
+                },
+                required: ["tool_type", "specific_need"]
+              }
+            }
           }
         ],
         tool_choice: "auto"
@@ -298,6 +434,144 @@ Remember: You're not just an assistant, you're a companion who genuinely cares a
           } catch (error) {
             console.error("Web search error:", error);
           }
+        }
+        // NEW ENHANCED TOOL HANDLERS
+        else if (toolCall.function.name === "break_down_task") {
+          const taskBreakdown = {
+            original_task: args.original_task,
+            subtasks: [
+              `Step 1: Research and gather information for "${args.original_task}"`,
+              `Step 2: Create a plan and outline for "${args.original_task}"`,
+              `Step 3: Start with the easiest part of "${args.original_task}"`,
+              `Step 4: Work through the main components`,
+              `Step 5: Review and finalize "${args.original_task}"`
+            ],
+            estimated_time: "2-4 hours total",
+            tips: "Break each step into 25-45 minute focused sessions. Take breaks between steps!"
+          };
+          
+          toolResults.push(`🎯 **Task Breakdown for "${args.original_task}":**\n\n${taskBreakdown.subtasks.map((task, i) => `${i + 1}. ${task}`).join('\n')}\n\n⏱️ **Estimated time:** ${taskBreakdown.estimated_time}\n\n💡 **Pro tip:** ${taskBreakdown.tips}`);
+          
+          // Save this breakdown as a memory
+          await supabase.from("memories").insert({
+            user_id: user.id,
+            category: "goals",
+            memory_text: `Broke down task: "${args.original_task}" into manageable steps`,
+            importance: 7
+          });
+        }
+        else if (toolCall.function.name === "suggest_focus_session") {
+          const sessionSuggestion = {
+            task: args.task_name,
+            duration: args.estimated_duration,
+            difficulty: args.difficulty_level || "medium",
+            break_schedule: args.break_reminders ? "Every 25-30 minutes" : "As needed",
+            prep_tips: [
+              "Clear your workspace and minimize distractions",
+              "Have water and a snack nearby",
+              "Set your phone to do not disturb",
+              "Define what 'done' looks like for this session"
+            ]
+          };
+          
+          toolResults.push(`🎯 **Focus Session Plan for "${sessionSuggestion.task}"**\n\n⏰ **Duration:** ${sessionSuggestion.duration} minutes\n🔥 **Difficulty:** ${sessionSuggestion.difficulty}\n⏸️ **Breaks:** ${sessionSuggestion.break_schedule}\n\n**Prep checklist:**\n${sessionSuggestion.prep_tips.map(tip => `• ${tip}`).join('\n')}\n\nReady to start? I'll check in with you periodically! 💪`);
+        }
+        else if (toolCall.function.name === "create_neuronaut_insight") {
+          const insights = {
+            community_engagement: [
+              "Host weekly 'ADHD-friendly' sessions with structured agendas and regular breaks",
+              "Create visual guides and infographics for complex topics",
+              "Implement a buddy system for accountability and support"
+            ],
+            content_strategy: [
+              "Use bullet points, headers, and white space for easy scanning",
+              "Include TL;DR summaries at the top of longer posts",
+              "Create content in multiple formats (text, video, audio) for different preferences"
+            ],
+            technical_feature: [
+              "Add keyboard shortcuts for power users",
+              "Implement customizable notification settings",
+              "Create a 'focus mode' that minimizes distracting elements"
+            ],
+            accessibility: [
+              "Ensure screen reader compatibility",
+              "Add high contrast mode options",
+              "Include font size adjustment settings"
+            ],
+            marketing: [
+              "Partner with neurodivergent influencers and advocates",
+              "Share real success stories from community members",
+              "Focus on authentic, non-patronizing messaging"
+            ]
+          };
+          
+          const relevantInsights = insights[args.insight_type as keyof typeof insights] || insights.community_engagement;
+          
+          toolResults.push(`🚀 **Neuronaut World Insight - ${args.insight_type.replace('_', ' ').toUpperCase()}**\n\n**Context:** ${args.current_context}\n\n**Suggestions:**\n${relevantInsights.map(insight => `• ${insight}`).join('\n')}\n\nThese ideas are tailored for your neurodivergent community! Want to dive deeper into any of these?`);
+          
+          // Save as achievement/progress memory
+          await supabase.from("memories").insert({
+            user_id: user.id,
+            category: "achievements",
+            memory_text: `Generated ${args.insight_type} insights for Neuronaut World project`,
+            importance: 6
+          });
+        }
+        else if (toolCall.function.name === "emotional_check_in") {
+          const supportResponses = {
+            overwhelmed: {
+              validation: "It's completely understandable to feel overwhelmed - you're juggling a lot right now, and that's tough.",
+              break_suggestion: "How about we pause for a moment? Take 3 deep breaths with me. What's one small thing you could do right now to feel a bit better?",
+              grounding: "Let's ground ourselves: Name 3 things you can see, 2 things you can hear, and 1 thing you can touch. I'm here with you."
+            },
+            frustrated: {
+              validation: "Frustration is so valid right now. Sometimes things just don't go the way we want them to, and that's really annoying.",
+              reframe: "This frustration shows how much you care about doing things well. What if we approached this from a different angle?",
+              break_suggestion: "Want to step away from this for a few minutes? Sometimes a short break helps reset our perspective."
+            },
+            excited: {
+              celebration: "I can feel your excitement! This energy is fantastic - let's channel it into something productive!",
+              validation: "Your enthusiasm is contagious! It's wonderful to see you this energized about your work."
+            },
+            anxious: {
+              grounding: "Anxiety can be overwhelming. Let's ground ourselves together - what's one thing that's definitely going well right now?",
+              validation: "Anxiety is your brain trying to protect you, but sometimes it goes overboard. You're doing better than you think."
+            }
+          };
+          
+          const emotion = args.detected_emotion as keyof typeof supportResponses;
+          const supportType = args.support_type as keyof typeof supportResponses[typeof emotion];
+          const response = supportResponses[emotion]?.[supportType] || "I'm here for you, whatever you're feeling right now. ❤️";
+          
+          toolResults.push(`💙 **Emotional Check-in**\n\n${response}\n\n${args.context ? `**Context I'm seeing:** ${args.context}` : ''}\n\nRemember: You're doing great, and it's okay to feel however you're feeling right now. What do you need most in this moment?`);
+        }
+        else if (toolCall.function.name === "suggest_external_integration") {
+          const integrationSuggestions = {
+            task_management: {
+              tools: ["Trello", "Todoist", "ClickUp"],
+              benefit: "Keep all your tasks organized and visible in one place"
+            },
+            calendar: {
+              tools: ["Google Calendar", "Calendly", "Notion Calendar"],
+              benefit: "Time-block your work and never miss important deadlines"
+            },
+            note_taking: {
+              tools: ["Obsidian", "Notion", "Roam Research"],
+              benefit: "Connect your ideas and build a knowledge base over time"
+            },
+            time_tracking: {
+              tools: ["Toggl", "RescueTime", "Forest"],
+              benefit: "Understand your work patterns and optimize your schedule"
+            },
+            collaboration: {
+              tools: ["Slack", "Discord", "Loom"],
+              benefit: "Better communication and async collaboration with your team"
+            }
+          };
+          
+          const suggestion = integrationSuggestions[args.tool_type as keyof typeof integrationSuggestions];
+          
+          toolResults.push(`🔗 **Integration Suggestion - ${args.tool_type.replace('_', ' ').toUpperCase()}**\n\n**Your need:** ${args.specific_need}\n\n**Recommended tools:** ${suggestion.tools.join(', ')}\n\n**Why this helps:** ${suggestion.benefit}\n\n${args.suggested_action ? `**Next step:** ${args.suggested_action}` : ''}\n\nWant me to help you set up any of these integrations?`);
         }
       }
     }
