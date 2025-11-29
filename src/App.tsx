@@ -5,8 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+
 import Auth from "./pages/Auth";
 import MainLayout from "./components/layout/MainLayout";
+import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,7 +23,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthenticated(!!session);
     });
 
@@ -52,6 +56,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <MainLayout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <Tasks />
               </ProtectedRoute>
             }
           />
