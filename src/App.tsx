@@ -1,9 +1,12 @@
+// src/App.tsx
+import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+
 import { supabase } from "@/integrations/supabase/client";
 
 import Auth from "./pages/Auth";
@@ -13,23 +16,31 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check existing session on load
+    void supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthenticated(!!session);
       setLoading(false);
     });
 
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthenticated(!!session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
@@ -40,7 +51,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return authenticated ? <>{children}</> : <Navigate to="/auth" />;
+  return authenticated ? <>{children}</> : <Navigate to="/auth" replace />;
 };
 
 const App = () => (
@@ -50,7 +61,21 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Auth page */}
           <Route path="/auth" element={<Auth />} />
+
+          {/* Supabase email links currently hit /chat#... 
+              This route just forwards to the main app */}
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/" replace />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Main app (sidebar + chat) */}
           <Route
             path="/"
             element={
@@ -59,6 +84,8 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+
+          {/* Tasks page */}
           <Route
             path="/tasks"
             element={
@@ -67,6 +94,8 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

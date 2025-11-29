@@ -1,20 +1,23 @@
+// src/pages/Auth.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Sparkles } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles } from "lucide-react";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
@@ -24,30 +27,34 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            // After email confirmation, Supabase will redirect here
+            emailRedirectTo: `${window.location.origin}/chat`,
           },
         });
+
         if (error) throw error;
+
         toast({
           title: "Welcome!",
-          description: "Account created successfully. Signing you in...",
+          description: "Check your email to confirm your account.",
         });
-        // Auto sign in after signup since email confirmation is disabled
-        setTimeout(() => {
-          navigate("/");
-        }, 1000);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
+
         if (error) throw error;
+
         navigate("/");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -104,7 +111,7 @@ const Auth = () => {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => setIsSignUp((prev) => !prev)}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               {isSignUp
